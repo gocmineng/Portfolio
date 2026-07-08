@@ -56,31 +56,36 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
         } else if (videoType === 'x' || videoType === 'twitter') {
-            // Twitter/X blocks iframe embeds with X-Frame-Options: DENY.
-            // The only working approach is the official Twitter Widget API:
-            //   1. Inject a <blockquote class="twitter-tweet"> with the post URL.
-            //   2. Call twttr.widgets.load() so the Twitter script renders it.
-            const tweetId  = parseTweetId(videoId);
-            const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
+            // Twitter Widget API requires the FULL tweet URL with username.
+            // x.com and twitter.com are interchangeable for the widget.
+            const tweetUrl = videoId.replace('https://x.com/', 'https://twitter.com/');
 
-            // Switch container to auto-height mode (tweet widget sets its own height)
+            // Switch container to auto-height (tweet widget sets its own height)
             modalVideoContainer.classList.add('video-container--tweet');
             modalVideoContainer.innerHTML = `
-                <blockquote class="twitter-tweet" data-theme="dark" data-dnt="true" data-conversation="none">
+                <blockquote class="twitter-tweet" data-theme="dark" data-dnt="true" data-conversation="none" data-media-max-width="560">
                     <a href="${tweetUrl}"></a>
                 </blockquote>
             `;
 
-            // Ask Twitter Widget API to render the blockquote we just injected
-            if (window.twttr && window.twttr.widgets) {
+            // twttr.ready() works whether the script has already loaded or is still loading.
+            // This is the official recommended approach.
+            const renderTweet = () => {
                 window.twttr.widgets.load(modalVideoContainer);
+            };
+
+            if (window.twttr) {
+                window.twttr.ready(renderTweet);
             } else {
-                // Widget script not yet loaded — wait for it then render
-                window.addEventListener('load', () => {
-                    if (window.twttr && window.twttr.widgets) {
-                        window.twttr.widgets.load(modalVideoContainer);
+                // Fallback: poll briefly until the script initialises
+                const poll = setInterval(() => {
+                    if (window.twttr) {
+                        clearInterval(poll);
+                        window.twttr.ready(renderTweet);
                     }
-                }, { once: true });
+                }, 200);
+                // Stop polling after 10 s to avoid memory leaks
+                setTimeout(() => clearInterval(poll), 10000);
             }
 
         } else {
