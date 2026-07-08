@@ -56,46 +56,43 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
         } else if (videoType === 'x' || videoType === 'twitter') {
-            // Extract tweet ID from the full X URL
-            const tweetId = parseTweetId(videoId);
+            // Build the full tweet URL from ID or use as-is
+            const tweetUrl = videoId.startsWith('http') ? videoId : `https://x.com/i/status/${videoId}`;
+            const tweetId  = parseTweetId(videoId);
 
             modalVideoContainer.classList.add('video-container--tweet');
 
-            // Show a loading state while the widget initialises
+            // Inject blockquote then call widgets.load() — the standard, reliable method
             modalVideoContainer.innerHTML = `
-                <div class="tweet-loading">
-                    <span>Loading video</span>
-                    <span class="tweet-loading-dots">...</span>
-                </div>
+                <blockquote class="twitter-tweet" data-media-max-width="560" data-theme="dark" data-dnt="true" data-conversation="none" data-align="center">
+                    <a href="https://x.com/i/status/${tweetId}"></a>
+                </blockquote>
             `;
 
-            const doCreate = () => {
-                modalVideoContainer.innerHTML = ''; // clear loading placeholder
-                window.twttr.widgets.createTweet(tweetId, modalVideoContainer, {
-                    theme: 'dark',
-                    dnt: true,
-                    conversation: 'none',
-                    align: 'center'
-                }).then((el) => {
-                    if (!el) {
-                        // Widget returned nothing — tweet may be private or deleted
+            const doLoad = () => {
+                window.twttr.widgets.load(modalVideoContainer);
+
+                // Fallback: if no iframe appears after 8s, show error link
+                setTimeout(() => {
+                    const hasEmbed = modalVideoContainer.querySelector('iframe');
+                    if (!hasEmbed) {
                         modalVideoContainer.innerHTML = `
                             <div class="tweet-error">
                                 <p>Could not load video.</p>
-                                <a href="${videoId}" target="_blank" rel="noopener">Watch on X ↗</a>
+                                <a href="${tweetUrl}" target="_blank" rel="noopener">Watch on X ↗</a>
                             </div>
                         `;
                     }
-                });
+                }, 8000);
             };
 
-            if (window.twttr) {
-                window.twttr.ready(doCreate);
+            if (window.twttr && window.twttr.widgets) {
+                doLoad();
             } else {
                 const poll = setInterval(() => {
-                    if (window.twttr) {
+                    if (window.twttr && window.twttr.widgets) {
                         clearInterval(poll);
-                        window.twttr.ready(doCreate);
+                        doLoad();
                     }
                 }, 200);
                 setTimeout(() => clearInterval(poll), 10000);
