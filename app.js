@@ -20,6 +20,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return url; // assume it's already a bare ID
     };
 
+    const previewMedia = document.querySelectorAll('.card-preview-media');
+    previewMedia.forEach((container) => {
+        const previewUrl = container.getAttribute('data-preview-url');
+        if (!previewUrl) return;
+
+        container.innerHTML = `
+            <div class="preview-placeholder">
+                <span class="preview-badge">X Showcase</span>
+                <span class="preview-text">Open in X</span>
+            </div>
+        `;
+
+        container.addEventListener('click', (event) => {
+            event.stopPropagation();
+            window.open(previewUrl, '_blank', 'noopener,noreferrer');
+        });
+    });
+
     // Open Modal Function
     const openModal = (card) => {
         lastFocusedElement = document.activeElement;
@@ -56,47 +74,16 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
         } else if (videoType === 'x' || videoType === 'twitter') {
-            // Build the full tweet URL from ID or use as-is
             const tweetUrl = videoId.startsWith('http') ? videoId : `https://x.com/i/status/${videoId}`;
-            const tweetId  = parseTweetId(videoId);
 
             modalVideoContainer.classList.add('video-container--tweet');
-
-            // Inject blockquote then call widgets.load() — the standard, reliable method
             modalVideoContainer.innerHTML = `
-                <blockquote class="twitter-tweet" data-media-max-width="560" data-theme="dark" data-dnt="true" data-conversation="none" data-align="center">
-                    <a href="https://x.com/i/status/${tweetId}"></a>
-                </blockquote>
+                <div class="tweet-fallback">
+                    <p class="tweet-fallback-title">Showcase video</p>
+                    <p class="tweet-fallback-copy">X embeds are blocked in this environment, so the showcase opens in a new tab.</p>
+                    <a href="${tweetUrl}" target="_blank" rel="noopener">Open on X ↗</a>
+                </div>
             `;
-
-            const doLoad = () => {
-                window.twttr.widgets.load(modalVideoContainer);
-
-                // Fallback: if no iframe appears after 8s, show error link
-                setTimeout(() => {
-                    const hasEmbed = modalVideoContainer.querySelector('iframe');
-                    if (!hasEmbed) {
-                        modalVideoContainer.innerHTML = `
-                            <div class="tweet-error">
-                                <p>Could not load video.</p>
-                                <a href="${tweetUrl}" target="_blank" rel="noopener">Watch on X ↗</a>
-                            </div>
-                        `;
-                    }
-                }, 8000);
-            };
-
-            if (window.twttr && window.twttr.widgets) {
-                doLoad();
-            } else {
-                const poll = setInterval(() => {
-                    if (window.twttr && window.twttr.widgets) {
-                        clearInterval(poll);
-                        doLoad();
-                    }
-                }, 200);
-                setTimeout(() => clearInterval(poll), 10000);
-            }
 
         } else {
             modalVideoContainer.classList.remove('video-container--tweet');
