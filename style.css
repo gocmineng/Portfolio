@@ -364,6 +364,42 @@ body {
     border-radius: 12px;
 }
 
+/* Loading placeholder shown while twttr widget initialises */
+.tweet-loading {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 2rem;
+}
+
+/* Error / fallback state when widget cannot render */
+.tweet-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.tweet-error a {
+    color: var(--accent-hover);
+    text-decoration: none;
+    font-weight: 500;
+    border: 1px solid var(--border-color);
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+
+.tweet-error a:hover {
+    background-color: var(--bg-card);
+    border-color: var(--border-hover);
+}
+
 /* Modal description (under video) */
 .modal-description {
     padding: 1.5rem;

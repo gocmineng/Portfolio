@@ -56,35 +56,48 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
         } else if (videoType === 'x' || videoType === 'twitter') {
-            // Twitter Widget API requires the FULL tweet URL with username.
-            // x.com and twitter.com are interchangeable for the widget.
-            const tweetUrl = videoId.replace('https://x.com/', 'https://twitter.com/');
+            // Extract tweet ID from the full X URL
+            const tweetId = parseTweetId(videoId);
 
-            // Switch container to auto-height (tweet widget sets its own height)
             modalVideoContainer.classList.add('video-container--tweet');
+
+            // Show a loading state while the widget initialises
             modalVideoContainer.innerHTML = `
-                <blockquote class="twitter-tweet" data-theme="dark" data-dnt="true" data-conversation="none" data-media-max-width="560">
-                    <a href="${tweetUrl}"></a>
-                </blockquote>
+                <div class="tweet-loading">
+                    <span>Loading video</span>
+                    <span class="tweet-loading-dots">...</span>
+                </div>
             `;
 
-            // twttr.ready() works whether the script has already loaded or is still loading.
-            // This is the official recommended approach.
-            const renderTweet = () => {
-                window.twttr.widgets.load(modalVideoContainer);
+            const doCreate = () => {
+                modalVideoContainer.innerHTML = ''; // clear loading placeholder
+                window.twttr.widgets.createTweet(tweetId, modalVideoContainer, {
+                    theme: 'dark',
+                    dnt: true,
+                    conversation: 'none',
+                    align: 'center'
+                }).then((el) => {
+                    if (!el) {
+                        // Widget returned nothing — tweet may be private or deleted
+                        modalVideoContainer.innerHTML = `
+                            <div class="tweet-error">
+                                <p>Could not load video.</p>
+                                <a href="${videoId}" target="_blank" rel="noopener">Watch on X ↗</a>
+                            </div>
+                        `;
+                    }
+                });
             };
 
             if (window.twttr) {
-                window.twttr.ready(renderTweet);
+                window.twttr.ready(doCreate);
             } else {
-                // Fallback: poll briefly until the script initialises
                 const poll = setInterval(() => {
                     if (window.twttr) {
                         clearInterval(poll);
-                        window.twttr.ready(renderTweet);
+                        window.twttr.ready(doCreate);
                     }
                 }, 200);
-                // Stop polling after 10 s to avoid memory leaks
                 setTimeout(() => clearInterval(poll), 10000);
             }
 
